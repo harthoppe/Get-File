@@ -19,14 +19,20 @@ function Get-File {
     try {
         $downloadPath = Join-Path -Path $destination -ChildPath $fileName
         Invoke-WebRequest -Uri $source -OutFile $downloadPath -ErrorAction Stop
-        if (Test-Path -Path $downloadPath) {
-        Write-Host "File downloaded successfully to $downloadPath"
-        }
     } catch {
-        Write-Host "Failed to download file. Error: $_"
+        Write-Host "Failed to download file. Error:"
+        Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
         exit
     }
     
+    if (Test-Path -Path $downloadPath) {
+        Write-Host "File downloaded successfully to:"
+        Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
+        } else {
+        Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
+        exit
+    }
+
     if ($expandArchive) {
         if ($fileName.EndsWith('.zip')) {
             try {
@@ -54,7 +60,7 @@ function Get-File {
 }
 
 
-$env:source = "https://app.box.com/s/ywhkw8q9b1quqzbqn08k5z59miolrzz0"
+$env:source = "https://app.box.com/shared/static/n59f46wckc8yj8vi43cjgn96gfrnl0wm.zip"
 $env:destination = "C:\Temp"
 $env:fileName = "test.zip"
 
