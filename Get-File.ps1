@@ -16,9 +16,10 @@ function Get-File {
         [bool] $expandArchive = $true
     )
 
-    # Donwload the file from web
+    $downloadPath = Join-Path -Path $destination -ChildPath $fileName
+
+    # Download the file from web
     try {
-        $downloadPath = Join-Path -Path $destination -ChildPath $fileName
         Invoke-WebRequest -Uri $source -OutFile $downloadPath -ErrorAction Stop
     } catch {
         Write-Host "Failed to download file. Error:"
@@ -43,9 +44,11 @@ function Get-File {
                 Get-Item -Path { $_.Matches.Groups[1].Value } | select -ExpandProperty FullName | forEach-Object {
                     $unzipPath = $_
                 }
-                Write-Host "Archive expanded successfully to $unzipPath"
+                Write-Host "Archive expanded successfully to:"
+                Write-Host $unzipPath -BackgroundColor Green -ForegroundColor White
                 try {
                     Remove-Item -Path $downloadPath -Force
+                    Write-Host "Archive file $downloadPath removed successfully."
                 } catch {
                     Write-Host "Failed to remove archive file. Error:"
                     Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
