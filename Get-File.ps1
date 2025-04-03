@@ -16,6 +16,7 @@ function Get-File {
         [bool] $expandArchive = $true
     )
 
+    # Donwload the file from web
     try {
         $downloadPath = Join-Path -Path $destination -ChildPath $fileName
         Invoke-WebRequest -Uri $source -OutFile $downloadPath -ErrorAction Stop
@@ -33,6 +34,7 @@ function Get-File {
         exit
     }
 
+    # Expand the archive if requested
     if ($expandArchive) {
         if ($fileName.EndsWith('.zip')) {
             try {
@@ -42,20 +44,28 @@ function Get-File {
                     $unzipPath = $_
                 }
                 Write-Host "Archive expanded successfully to $unzipPath"
-                Remove-Item -Path $downloadPath -Force
-                Write-Host "Removed archive file $downloadPath"
+                try {
+                    Remove-Item -Path $downloadPath -Force
+                } catch {
+                    Write-Host "Failed to remove archive file. Error:"
+                    Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                }
             }
             catch {
-                Write-Host "Failed to expand archive. Error: $_"
+                Write-Host "Failed to expand archive. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
         } elseif ($fileName.EndsWith('.7z')) {
             # PLACEHOLD
         } else {
-            Write-Host "File is not a supported archive format. No extraction performed."
+            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Red -ForegroundColor White
+            exit
         }
 
-    }
+    } else {
+        Write-Host "Archive expansion skipped, not requested."
+    }   
 
 }
 
