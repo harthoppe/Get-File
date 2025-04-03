@@ -27,7 +27,7 @@ function Get-File {
     
     if ($expandArchive) {
         try {
-            Expand-Archive -Path $outFile -DestinationPath $destination -Force -ErrorAction Stop
+            Expand-Archive -LiteralPath $outFile -DestinationPath $destination -Force -ErrorAction Stop
             Write-Host "Archive expanded successfully to $destination"
             Remove-Item -Path $outFile -Force
             Write-Host "Removed archive file $outFile"
@@ -40,8 +40,8 @@ function Get-File {
 }
 
 
-$env:source = "https://app.box.com/shared/static/qq5dragr3rk1ctu0gky242j5i0dcih6f.zip"
+$env:source = "https://app.box.com/shared/static/xcuil54m9ptqs2m59t69y4y1dama4nc2.jpg"
 $env:destination = "C:\Temp"
-$env:expandArchive = $false
+$env:fileName = "test.zip"
 
-Get-File -source $env:source -destination $env:destination -expandArchive $false
+Get-File -source $env:source -destination $env:destination -expandArchive $true -fileName $env:fileName
