@@ -25,17 +25,28 @@ function Get-File {
         exit
     }
     
-    if ($expandArchive -and $fileName -match '\.zip$') {
-        try {
-            Expand-Archive -LiteralPath $outFile -DestinationPath $destination -Force -ErrorAction Stop
-            Write-Host "Archive expanded successfully to $destination"
-            Remove-Item -Path $outFile -Force
-            Write-Host "Removed archive file $outFile"
+    if ($expandArchive) {
+        if ($fileName.EndsWith('.zip')) {
+            try {
+                Expand-Archive -LiteralPath $downloadPath -DestinationPath $destination -Force -ErrorAction Stop -Force -Verbose 4>&1 | 
+                Select-String -Pattern "Created '(.+)'" | 
+                Get-Item -Path { $_.Matches.Groups[1].Value } | select -ExpandProperty FullName | forEach-Object {
+                    $unzipPath = $_
+                }
+                Write-Host "Archive expanded successfully to $unzipPath"
+                Remove-Item -Path $outFile -Force
+                Write-Host "Removed archive file $outFile"
+            }
+            catch {
+                Write-Host "Failed to expand archive. Error: $_"
+                exit
+            }
+        } elseif ($fileName.EndsWith('.7z')) {
+            # PLACEHOLD
+        } else {
+            Write-Host "File is not a supported archive format. No extraction performed."
         }
-        catch {
-            Write-Host "Failed to expand archive. Error: $_"
-            exit
-        }
+
     }
 
 }
