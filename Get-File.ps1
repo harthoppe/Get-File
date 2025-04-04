@@ -72,10 +72,23 @@ function Get-File {
                 exit
             }
         } elseif ($sourceFileName.EndsWith('.7z')) {
-            # PLACEHOLD
+            try {
+                Install-Module -Name 7Zip4PowerShell -Scope CurrentUser -Force -ErrorAction Stop
+            }
+            catch {
+                Write-Host "Failed to install 7Zip4PowerShell module. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                exit
+            }
+            try {
+                Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose
+            } catch {
+                Write-Host "Failed to expand 7z archive. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                exit
+            }
         } else {
             Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Red -ForegroundColor White
-            exit
         }
 
     } else {
@@ -85,7 +98,7 @@ function Get-File {
 }
 
 
-$env:source = "https://app.box.com/shared/static/n59f46wckc8yj8vi43cjgn96gfrnl0wm.zip"
+$env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
 $env:destination = "C:\Temp"
 
 # structured for RMM
