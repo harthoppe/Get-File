@@ -52,15 +52,19 @@ function Get-File {
     }
 
     # Download using Invoke-WebRequest
-    try {
-        Write-Host "Retrying download using 'Invoke-WebRequest'..."
-        Invoke-WebRequest -Uri $source -OutFile $downloadPath
-        Test-Download
-    } catch {
-        Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
-        Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-        Write-Host "Please check the source address and try again."
-        exit
+    if ($false -eq $SkipDownload) {
+        try {
+            Write-Host "Retrying download using 'Invoke-WebRequest'..."
+            Invoke-WebRequest -Uri $source -OutFile $downloadPath
+            Test-Download
+        } catch {
+            Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+            Write-Host "Please check the source address and try again."
+            exit
+        }
+    } else {
+        Write-Host "Download skipped as requested."
     }
 
     # Expand the archive if requested
