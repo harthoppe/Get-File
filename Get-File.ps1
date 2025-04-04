@@ -16,30 +16,7 @@ function Get-File {
         [switch] $SkipDownload
     )
 
-    # Extract the file name from the source URL and create the full download path
-    $sourceFileName = $source.Split('/')[-1]
-    $downloadPath = Join-Path -Path $destination -ChildPath $sourceFileName 
-
-    # Download
-    if ($false -eq $SkipDownload) {
-        try {
-            # Attempt to Download using Start-BitsTransfer
-            Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
-        } catch {
-            Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
-            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-            # Download using Invoke-WebRequest
-            try {
-                Write-Host "Retrying download using 'Invoke-WebRequest'..."
-                Invoke-WebRequest -Uri $source -OutFile $downloadPath
-            } catch {
-                Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
-                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-                Write-Host "Please check the URL and try again."
-                exit
-            }
-        }
-        # Check if the file was downloaded successfully
+    function Test-Download {
         if (Test-Path -Path $downloadPath) {
             Write-Host "File downloaded successfully to:"
             Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
@@ -47,15 +24,50 @@ function Get-File {
             Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
             exit
         }
+    }
+
+    # Extract the file name from the source URL or UNC and create the full download path
+    if ($source.StartsWith("\\")) {
+        Write-Host "Source is a UNC path..."
+        $fileName = $source.Split('\')[-1]
+    } else {
+        Write-Host "Source is a URL..."
+        $fileName = $source.Split('/')[-1]
+    }
+    $downloadPath = Join-Path -Path $destination -ChildPath $fileName 
+
+    # Download using Start-BitsTransfer
+    if ($false -eq $SkipDownload) {
+        try {
+            # Download using Start-BitsTransfer
+            Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
+            Test-Download
+        } catch {
+            Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
+            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+        }
+
     } else {
         Write-Host "Download skipped as requested."
+    }
+
+    # Download using Invoke-WebRequest
+    try {
+        Write-Host "Retrying download using 'Invoke-WebRequest'..."
+        Invoke-WebRequest -Uri $source -OutFile $downloadPath
+        Test-Download
+    } catch {
+        Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+        Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+        Write-Host "Please check the source address and try again."
+        exit
     }
 
     # Expand the archive if requested
     if ($false -eq $SkipUnzip) {
         
         # ZIP files
-        if ($sourceFileName.EndsWith('.zip')) {
+        if ($fileName.EndsWith('.zip')) {
             try {
                 $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
@@ -91,7 +103,7 @@ function Get-File {
             }
        
         # 7z files            
-        } elseif ($sourceFileName.EndsWith('.7z')) {
+        } elseif ($fileName.EndsWith('.7z')) {
 
             # Install 7Zip4PowerShell module if not already installed
             if (-not (Get-Module -ListAvailable -Name 7Zip4PowerShell)) {
@@ -150,7 +162,7 @@ function Get-File {
                 exit
             }
         } else {
-            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Red -ForegroundColor White
+            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
         }
 
     } else {
@@ -160,7 +172,7 @@ function Get-File {
 }
 
 
-$env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
+$env:source = "\\ziondrive01\StarDrive\Information Technology\Shared\CTSC\ChromeSetup(1).exe"
 $env:destination = "C:\Temp"
 
-Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$true -SkipDownload:$true
+Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$false -SkipDownload:$false
