@@ -4,13 +4,16 @@ function Get-File {
 
     param (
         [Parameter(Mandatory = $true)]
-        [string] $source,
+        [string] $Source,
 
         [Parameter(Mandatory = $true)]
-        [string] $destination,
+        [string] $Destination,
 
         [Parameter(Mandatory = $false)]
-        [switch] $expandArchive
+        [switch] $SkipUnzip,
+
+        [Parameter(Mandatory = $false)]
+        [switch] $SkipDownload
     )
 
     # Extract the file name from the source URL and create the full download path
@@ -18,35 +21,38 @@ function Get-File {
     $downloadPath = Join-Path -Path $destination -ChildPath $sourceFileName 
 
     # Download
-    try {
-        # Attempt to Download using Start-BitsTransfer
-        Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
-    } catch {
-        Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
-        Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-        # Download using Invoke-WebRequest
+    if ($false -eq $SkipDownload) {
         try {
-            Write-Host "Retrying download using 'Invoke-WebRequest'..."
-            Invoke-WebRequest -Uri $source -OutFile $downloadPath
+            # Attempt to Download using Start-BitsTransfer
+            Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
         } catch {
-            Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+            Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
             Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-            Write-Host "Please check the URL and try again."
+            # Download using Invoke-WebRequest
+            try {
+                Write-Host "Retrying download using 'Invoke-WebRequest'..."
+                Invoke-WebRequest -Uri $source -OutFile $downloadPath
+            } catch {
+                Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                Write-Host "Please check the URL and try again."
+                exit
+            }
+        }
+        # Check if the file was downloaded successfully
+        if (Test-Path -Path $downloadPath) {
+            Write-Host "File downloaded successfully to:"
+            Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
+        } else {
+            Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
             exit
         }
-    }
-
-    # Check if the file was downloaded successfully
-    if (Test-Path -Path $downloadPath) {
-        Write-Host "File downloaded successfully to:"
-        Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
     } else {
-        Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
-        exit
+        Write-Host "Download skipped as requested."
     }
 
     # Expand the archive if requested
-    if ($expandArchive) {
+    if ($false -eq $SkipUnzip) {
         
         # ZIP files
         if ($sourceFileName.EndsWith('.zip')) {
@@ -148,7 +154,7 @@ function Get-File {
         }
 
     } else {
-        Write-Host "Archive expansion skipped, not requested."
+        Write-Host "Unzip skipped as requested."
     }
 
 }
@@ -156,6 +162,5 @@ function Get-File {
 
 $env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
 $env:destination = "C:\Temp"
-$env:expandArchive = $false
 
-Get-File -source $env:source -destination $env:destination -expandArchive:([bool]$env:expandArchive)
+Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$true -SkipDownload:$true
