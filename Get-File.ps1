@@ -1,7 +1,7 @@
 function Get-File {
-    
+
     [CmdletBinding()]
-    
+
     param (
         [Parameter(Mandatory = $true)]
         [string] $source,
@@ -27,11 +27,11 @@ function Get-File {
         Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
         exit
     }
-    
+
     if (Test-Path -Path $downloadPath) {
         Write-Host "File downloaded successfully to:"
         Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
-        } else {
+    } else {
         Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
         exit
     }
@@ -41,11 +41,12 @@ function Get-File {
         if ($fileName.EndsWith('.zip')) {
             try {
                 $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
-                $output | ForEach-Object {
+                $createdPaths = @($output | ForEach-Object {
                     if ($_ -match "Created '([^']+)'") {
                         $matches[1]
                     }
-                }
+                })
+
                 Write-Host "Archive expanded successfully to:"
                 Write-Host $unzipPath -BackgroundColor Green -ForegroundColor White
                 try {
@@ -55,8 +56,7 @@ function Get-File {
                     Write-Host "Failed to remove archive file. Error:"
                     Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 }
-            }
-            catch {
+            } catch {
                 Write-Host "Failed to expand archive. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
@@ -70,7 +70,7 @@ function Get-File {
 
     } else {
         Write-Host "Archive expansion skipped, not requested."
-    }   
+    }
 
 }
 
