@@ -13,18 +13,29 @@ function Get-File {
         [switch] $expandArchive
     )
 
+    # Extract the file name from the source URL and create the full download path
     $sourceFileName = $source.Split('/')[-1]
     $downloadPath = Join-Path -Path $destination -ChildPath $sourceFileName 
 
-    # Download using Invoke-WebRequest
+    # Download
     try {
-        Invoke-WebRequest -Uri $source -OutFile $downloadPath
+        # Attempt to Download using Start-BitsTransfer
+        Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
     } catch {
-        Write-Host "Failed to download file. Error:"
+        Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
         Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-        exit
+        # Download using Invoke-WebRequest
+        try {
+            Write-Host "Retrying download using 'Invoke-WebRequest'..."
+            Invoke-WebRequest -Uri $source -OutFile $downloadPath
+        } catch {
+            Write-Host "Failed to download file. Error:"
+            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+            exit
+        }
     }
 
+    # Check if the file was downloaded successfully
     if (Test-Path -Path $downloadPath) {
         Write-Host "File downloaded successfully to:"
         Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
@@ -144,6 +155,6 @@ function Get-File {
 
 $env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
 $env:destination = "C:\Temp"
-[bool] $env:expandArchive = $true
+$env:expandArchive = $false
 
 Get-File -source $env:source -destination $env:destination -expandArchive:([bool]$env:expandArchive)
