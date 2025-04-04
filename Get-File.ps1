@@ -9,18 +9,19 @@ function Get-File {
         [Parameter(Mandatory = $true)]
         [string] $destination,
 
-        [Parameter(Mandatory = $true)]
-        [string] $fileName,
+        # [Parameter(Mandatory = $true)]
+        # [string] $fileName,
 
         [Parameter(Mandatory = $false)]
-        [bool] $expandArchive = $true
+        [bool] $expandArchive = $false
     )
 
-    $downloadPath = Join-Path -Path $destination -ChildPath $fileName
+    $sourceFileName = $source.Split('/')[-1]
+    $downloadPath = Join-Path -Path $destination -ChildPath $sourceFileName 
 
     # Download the file from web
     try {
-        Invoke-WebRequest -Uri $source -OutFile $downloadPath -ErrorAction Stop
+        Invoke-WebRequest -Uri $source -OutFile $downloadPath
     } catch {
         Write-Host "Failed to download file. Error:"
         Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
@@ -39,10 +40,11 @@ function Get-File {
     if ($expandArchive) {
         if ($fileName.EndsWith('.zip')) {
             try {
-                Expand-Archive -LiteralPath $downloadPath -DestinationPath $destination -ErrorAction Stop -Force -Verbose 4>&1 | 
-                Select-String -Pattern "Created '(.+)'" | 
-                Get-Item -Path { $_.Matches.Groups[1].Value } | select -ExpandProperty FullName | forEach-Object {
-                    $unzipPath = $_
+                $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
+                $output | ForEach-Object {
+                    if ($_ -match "Created '([^']+)'") {
+                        $matches[1]
+                    }
                 }
                 Write-Host "Archive expanded successfully to:"
                 Write-Host $unzipPath -BackgroundColor Green -ForegroundColor White
@@ -76,5 +78,6 @@ function Get-File {
 $env:source = "https://app.box.com/shared/static/n59f46wckc8yj8vi43cjgn96gfrnl0wm.zip"
 $env:destination = "C:\Temp"
 $env:fileName = "test.zip"
+$env:expandArchive = $true
 
-Get-File -source $env:source -destination $env:destination -fileName $env:fileName -expandArchive $true
+Get-File -source $env:source -destination $env:destination -fileName $env:fileName -expandArchive:$env:expandArchive
