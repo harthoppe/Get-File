@@ -81,7 +81,32 @@ function Get-File {
                 exit
             }
             try {
-                Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose
+                $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
+                $createdPaths = @($output | ForEach-Object {
+                    if ($_ -match "Extracting file '([^']+)'") {
+                        $matches[1]
+                    }
+                })
+                Write-Host "Archive expanded..."
+                foreach ($path in $createdPaths) {
+                    if (Test-Path -Path $path) {
+                        Write-Host "Created:"
+                        Write-Host $path -BackgroundColor Green -ForegroundColor White
+                    } else {
+                        Write-Host "Failed to find:"
+                        Write-Host $path -BackgroundColor Red -ForegroundColor White
+                    }
+                }
+                try {
+                    Remove-Item -Path $downloadPath -Force
+                    Write-Host "Removed archive file:"
+                    Write-Host $downloadPath
+                } catch {
+                    Write-Host "Failed to remove archive file:"
+                    Write-Host $downloadPath
+                    Write-Host "Error:"
+                    Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                }
             } catch {
                 Write-Host "Failed to expand 7z archive. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
