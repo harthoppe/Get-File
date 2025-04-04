@@ -29,8 +29,9 @@ function Get-File {
             Write-Host "Retrying download using 'Invoke-WebRequest'..."
             Invoke-WebRequest -Uri $source -OutFile $downloadPath
         } catch {
-            Write-Host "Failed to download file. Error:"
+            Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
             Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+            Write-Host "Please check the URL and try again."
             exit
         }
     }
