@@ -13,7 +13,7 @@ function Get-File {
         # [string] $fileName,
 
         [Parameter(Mandatory = $false)]
-        [bool] $expandArchive = $false
+        [switch] $expandArchive
     )
 
     $sourceFileName = $source.Split('/')[-1]
@@ -46,9 +46,9 @@ function Get-File {
                         $matches[1]
                     }
                 })
-
-                Write-Host "Archive expanded successfully to:"
-                Write-Host $unzipPath -BackgroundColor Green -ForegroundColor White
+                # add foreach test path later
+                Write-Host "Archive expanded successfully:"
+                Write-Host $createdPaths -BackgroundColor Green -ForegroundColor White
                 try {
                     Remove-Item -Path $downloadPath -Force
                     Write-Host "Archive file $downloadPath removed successfully."
