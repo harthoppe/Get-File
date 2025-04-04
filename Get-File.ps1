@@ -9,9 +9,6 @@ function Get-File {
         [Parameter(Mandatory = $true)]
         [string] $destination,
 
-        # [Parameter(Mandatory = $true)]
-        # [string] $fileName,
-
         [Parameter(Mandatory = $false)]
         [switch] $expandArchive
     )
@@ -38,6 +35,8 @@ function Get-File {
 
     # Expand the archive if requested
     if ($expandArchive) {
+        
+        # ZIP files
         if ($sourceFileName.EndsWith('.zip')) {
             try {
                 $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
@@ -56,6 +55,7 @@ function Get-File {
                         Write-Host $path -BackgroundColor Red -ForegroundColor White
                     }
                 }
+                # Remove the original archive file
                 try {
                     Remove-Item -Path $downloadPath -Force
                     Write-Host "Removed archive file:"
@@ -71,7 +71,11 @@ function Get-File {
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
+       
+        # 7z files            
         } elseif ($sourceFileName.EndsWith('.7z')) {
+
+            # Install 7Zip4PowerShell module if not already installed
             if (-not (Get-Module -ListAvailable -Name 7Zip4PowerShell)) {
                 try {
                     Write-Host "7Zip4PowerShell module not found. Installing..."
@@ -92,6 +96,7 @@ function Get-File {
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
+            # Expand the 7z archive
             try {
                 $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
@@ -110,6 +115,7 @@ function Get-File {
                         Write-Host $fullPath -BackgroundColor Red -ForegroundColor White
                     }
                 }
+                # Remove the original archive file
                 try {
                     Remove-Item -Path $downloadPath -Force
                     Write-Host "Removed orginal archive file:"
@@ -138,10 +144,6 @@ function Get-File {
 
 $env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
 $env:destination = "C:\Temp"
+[bool] $env:expandArchive = $true
 
-# structured for RMM (NinjaOne)
-if ($env:expandArchive -eq "True") {
-    Get-File -source $env:source -destination $env:destination -expandArchive
-} else {
-    Get-File -source $env:source -destination $env:destination
-}
+Get-File -source $env:source -destination $env:destination -expandArchive:([bool]$env:expandArchive)
