@@ -77,7 +77,10 @@ function Get-File {
 
 $env:source = "https://app.box.com/shared/static/n59f46wckc8yj8vi43cjgn96gfrnl0wm.zip"
 $env:destination = "C:\Temp"
-$env:fileName = "test.zip"
-$env:expandArchive = $true
 
-Get-File -source $env:source -destination $env:destination -fileName $env:fileName -expandArchive:$env:expandArchive
+# structured for RMM
+if ($env:expandArchive) {
+    Get-File -source $env:source -destination $env:destination -expandArchive
+} else {
+    Get-File -source $env:source -destination $env:destination
+}
