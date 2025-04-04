@@ -72,35 +72,48 @@ function Get-File {
                 exit
             }
         } elseif ($sourceFileName.EndsWith('.7z')) {
+            if (-not (Get-Module -ListAvailable -Name 7Zip4PowerShell)) {
+                try {
+                    Write-Host "7Zip4PowerShell module not found. Installing..."
+                    Install-Module -Name 7Zip4PowerShell -Scope CurrentUser -Force -ErrorAction Stop
+                }
+                catch {
+                    Write-Host "Failed to install 7Zip4PowerShell module."
+                    Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                    exit
+                }
+            }
+            # Import the module explicitly.
             try {
-                Install-Module -Name 7Zip4PowerShell -Scope CurrentUser -Force -ErrorAction Stop
+                Import-Module 7Zip4PowerShell -ErrorAction Stop
             }
             catch {
-                Write-Host "Failed to install 7Zip4PowerShell module. Error:"
+                Write-Host "Failed to import 7Zip4PowerShell module."
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
             try {
                 $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
-                    if ($_ -match "Extracting file '([^']+)'") {
+                    if ($_ -match 'Extracting file "([^"]+)"') {
                         $matches[1]
                     }
                 })
                 Write-Host "Archive expanded..."
                 foreach ($path in $createdPaths) {
-                    if (Test-Path -Path $path) {
+                    $fullPath = Join-Path -Path $destination -ChildPath $path
+                    if (Test-Path -Path $fullPath) {
                         Write-Host "Created:"
-                        Write-Host $path -BackgroundColor Green -ForegroundColor White
+                        Write-Host $fullPath -BackgroundColor Green -ForegroundColor White
                     } else {
                         Write-Host "Failed to find:"
-                        Write-Host $path -BackgroundColor Red -ForegroundColor White
+                        Write-Host $fullPath -BackgroundColor Red -ForegroundColor White
                     }
                 }
                 try {
                     Remove-Item -Path $downloadPath -Force
-                    Write-Host "Removed archive file:"
-                    Write-Host $downloadPath
+                    Write-Host "Removed orginal archive file:"
+                    Write-Host $downloadPath -BackgroundColor Yellow -ForegroundColor White
                 } catch {
                     Write-Host "Failed to remove archive file:"
                     Write-Host $downloadPath
@@ -126,8 +139,8 @@ function Get-File {
 $env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
 $env:destination = "C:\Temp"
 
-# structured for RMM
-if ($env:expandArchive) {
+# structured for RMM (NinjaOne)
+if ($env:expandArchive -eq "True") {
     Get-File -source $env:source -destination $env:destination -expandArchive
 } else {
     Get-File -source $env:source -destination $env:destination
