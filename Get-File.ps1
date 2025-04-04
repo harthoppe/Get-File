@@ -38,7 +38,7 @@ function Get-File {
 
     # Expand the archive if requested
     if ($expandArchive) {
-        if ($fileName.EndsWith('.zip')) {
+        if ($sourceFileName.EndsWith('.zip')) {
             try {
                 $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
@@ -46,14 +46,24 @@ function Get-File {
                         $matches[1]
                     }
                 })
-                # add foreach test path later
-                Write-Host "Archive expanded successfully:"
-                Write-Host $createdPaths -BackgroundColor Green -ForegroundColor White
+                Write-Host "Archive expanded..."
+                foreach ($path in $createdPaths) {
+                    if (Test-Path -Path $path) {
+                        Write-Host "Created:"
+                        Write-Host $path -BackgroundColor Green -ForegroundColor White
+                    } else {
+                        Write-Host "Failed to find:"
+                        Write-Host $path -BackgroundColor Red -ForegroundColor White
+                    }
+                }
                 try {
                     Remove-Item -Path $downloadPath -Force
-                    Write-Host "Archive file $downloadPath removed successfully."
+                    Write-Host "Removed archive file:"
+                    Write-Host $downloadPath
                 } catch {
-                    Write-Host "Failed to remove archive file. Error:"
+                    Write-Host "Failed to remove archive file:"
+                    Write-Host $downloadPath
+                    Write-Host "Error:"
                     Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 }
             } catch {
@@ -61,7 +71,7 @@ function Get-File {
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
-        } elseif ($fileName.EndsWith('.7z')) {
+        } elseif ($sourceFileName.EndsWith('.7z')) {
             # PLACEHOLD
         } else {
             Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Red -ForegroundColor White
