@@ -68,7 +68,7 @@ function Get-File {
         
         param (
             [Parameter(Mandatory = $false)]
-            [switch] $zip,
+            [switch] $Zip,
             [Parameter(Mandatory = $false)]
             [switch] $7zip
         )
@@ -127,7 +127,7 @@ function Get-File {
     ############################ MAIN SCRIPT LOGIC ############################
     ###########################################################################
 
-    
+
     Get-SourceType
 
     # Extract the file name and create the full download path
@@ -136,6 +136,8 @@ function Get-File {
     } elseif ($sourceType -eq "URL") {
         $fileName = $source.Split('/')[-1]
     }
+    Write-Host "File name extracted:"
+    Write-Host $fileName
 
     # Set the download path
     if (Test-Path $Destination) {
@@ -144,6 +146,8 @@ function Get-File {
         Write-Host "Destination path does not exist." -BackgroundColor Red -ForegroundColor White
         exit
     }
+    Write-Host "Download path set to:"
+    Write-Host $downloadPath
 
     # Download using Start-BitsTransfer
     if ($false -eq $SkipDownload) {
@@ -179,7 +183,7 @@ function Get-File {
     # Unzip the file
     if ($false -eq $SkipUnzip) {
         if ($fileName.EndsWith('.zip')) {
-            Expand-ArchiveAdvanced -zip
+            Expand-ArchiveAdvanced -Zip
         } elseif ($fileName.EndsWith('.7z')) {
             Expand-ArchiveAdvanced -7zip
         } else {
