@@ -16,6 +16,20 @@ function Get-File {
         [switch] $SkipDownload
     )
 
+    function Get-SourceType {
+        if ($source.StartsWith("\\")) {
+            $sourceType = "UNC"
+            Write-Host "Source is a UNC path..."
+        } elseif ($source.StartsWith("http")) {
+            $sourceType = "URL"
+            Write-Host "Source is a URL..."
+        } else {
+            $sourceType = "Unknown"
+            Write-Host "Source type is unknown. Please check the source address." -BackgroundColor Red -ForegroundColor White
+            exit
+        }
+    }
+    
     function Test-Download {
         if (Test-Path -Path $downloadPath) {
             Write-Host "File downloaded successfully to:"
@@ -48,98 +62,88 @@ function Get-File {
         }
     }
 
+
+
     function Expand-ArchiveAdvanced {
-        # ZIP files
-        if ($fileName.EndsWith('.zip')) {
-            try {
+        
+        param (
+            [Parameter(Mandatory = $false)]
+            [switch] $zip,
+            [Parameter(Mandatory = $false)]
+            [switch] $7zip
+        )
+        
+        Write-Host "Expanding archive..."
+        try {
+            if ($zip) {
                 $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
                     if ($_ -match "Created '([^']+)'") {
                         $matches[1]
                     }
                 })
-                Write-Host "Archive expanded..."
-                foreach ($path in $createdPaths) {
-                    if (Test-Path -Path $path) {
-                        Write-Host "Created:"
-                        Write-Host $path -BackgroundColor Green -ForegroundColor White
-                    } else {
-                        Write-Host "Failed to find:"
-                        Write-Host $path -BackgroundColor Red -ForegroundColor White
-                    }
-                }
-                # Remove the original archive file
-                try {
-                    Remove-Item -Path $downloadPath -Force
-                    Write-Host "Removed archive file:"
-                    Write-Host $downloadPath
-                } catch {
-                    Write-Host "Failed to remove archive file:"
-                    Write-Host $downloadPath
-                    Write-Host "Error:"
-                    Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-                }
-            } catch {
-                Write-Host "Failed to expand archive. Error:"
-                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-                exit
-            }
-       
-        # 7z files            
-        } elseif ($fileName.EndsWith('.7z')) {
-            Install-7zip4Powershell
-            # Expand the 7z archive
-            try {
+            } elseif ($7zip) {
+                Install-7zip4Powershell
                 $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
                     if ($_ -match 'Extracting file "([^"]+)"') {
                         $matches[1]
                     }
                 })
-                Write-Host "Archive expanded..."
-                foreach ($path in $createdPaths) {
-                    $fullPath = Join-Path -Path $destination -ChildPath $path
-                    if (Test-Path -Path $fullPath) {
-                        Write-Host "Created:"
-                        Write-Host $fullPath -BackgroundColor Green -ForegroundColor White
-                    } else {
-                        Write-Host "Failed to find:"
-                        Write-Host $fullPath -BackgroundColor Red -ForegroundColor White
-                    }
-                }
-                # Remove the original archive file
-                try {
-                    Remove-Item -Path $downloadPath -Force
-                    Write-Host "Removed orginal archive file:"
-                    Write-Host $downloadPath -BackgroundColor Yellow -ForegroundColor White
-                } catch {
-                    Write-Host "Failed to remove archive file:"
-                    Write-Host $downloadPath
-                    Write-Host "Error:"
-                    Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-                }
-            } catch {
-                Write-Host "Failed to expand 7z archive. Error:"
+            }
+        } catch {
+                Write-Host "Failed to expand archive. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
+        }
+        
+        # Test if the archive was expanded successfully
+        Write-Host "Testing if the archive was expanded successfully..."
+        foreach ($path in $createdPaths) {
+            if (Test-Path -Path $path) {
+                Write-Host "Created:"
+                Write-Host $path -BackgroundColor Green -ForegroundColor White
+            } else {
+                Write-Host "Failed to find:"
+                Write-Host $path -BackgroundColor Red -ForegroundColor White
             }
-        } else {
-            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
         }
 
-    } else {
-        Write-Host "Unzip skipped as requested."
+        # Remove the original archive file
+        try {
+            Remove-Item -Path $downloadPath -Force
+            Write-Host "Removed archive file:"
+            Write-Host $downloadPath
+        } catch {
+            Write-Host "Failed to remove archive file:"
+            Write-Host $downloadPath
+            Write-Host "Error:"
+            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+        }
     }
 
-    # Extract the file name from the source URL or UNC and create the full download path
-    if ($source.StartsWith("\\")) {
-        Write-Host "Source is a UNC path..."
+
+    ###########################################################################
+    ############################ MAIN SCRIPT LOGIC ############################
+    ###########################################################################
+
+    
+    Get-SourceType
+
+    # Extract the file name and create the full download path
+    if ($sourceType -eq "UNC") {
         $fileName = $source.Split('\')[-1]
-    } else {
-        Write-Host "Source is a URL..."
+    } elseif ($sourceType -eq "URL") {
         $fileName = $source.Split('/')[-1]
     }
-    $downloadPath = Join-Path -Path $destination -ChildPath $fileName 
+
+    # Set the download path
+    if (Test-Path $Destination) {
+        $downloadPath = Join-Path -Path $destination -ChildPath $fileName
+    } else {
+        Write-Host "Destination path does not exist." -BackgroundColor Red -ForegroundColor White
+        exit
+    }
 
     # Download using Start-BitsTransfer
     if ($false -eq $SkipDownload) {
@@ -172,12 +176,19 @@ function Get-File {
         Write-Host "Download skipped as requested."
     }
 
-    # Unzip the file if not skipped
+    # Unzip the file
     if ($false -eq $SkipUnzip) {
-        Expand-ArchiveAdvanced
+        if ($fileName.EndsWith('.zip')) {
+            Expand-ArchiveAdvanced -zip
+        } elseif ($fileName.EndsWith('.7z')) {
+            Expand-ArchiveAdvanced -7zip
+        } else {
+            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
+        }
     } else {
-        Write-Host "Unzip skipped as requested."
+        Write-Host "Unzip is skipped as requested."
     }
+
 }
 
 $env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
