@@ -16,7 +16,7 @@ function Get-File {
     $sourceFileName = $source.Split('/')[-1]
     $downloadPath = Join-Path -Path $destination -ChildPath $sourceFileName 
 
-    # Download the file from web
+    # Download using Invoke-WebRequest
     try {
         Invoke-WebRequest -Uri $source -OutFile $downloadPath
     } catch {
