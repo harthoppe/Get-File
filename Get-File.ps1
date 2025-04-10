@@ -18,24 +18,24 @@ function Get-File {
 
     function Get-SourceType {
         if ($source.StartsWith("\\")) {
-            $sourceType = "UNC"
-            Write-Host "Source is a UNC path..."
+            $global:sourceType = "UNC"
+            Write-Host `n"Source is a UNC path..."
         } elseif ($source.StartsWith("http")) {
-            $sourceType = "URL"
-            Write-Host "Source is a URL..."
+            $global:sourceType = "URL"
+            Write-Host `n"Source is a URL..."
         } else {
             $sourceType = "Unknown"
-            Write-Host "Source type is unknown. Please check the source address." -BackgroundColor Red -ForegroundColor White
+            Write-Host `n"Source type is unknown. Please check the source address." -BackgroundColor Red -ForegroundColor White
             exit
         }
     }
     
     function Test-Download {
         if (Test-Path -Path $downloadPath) {
-            Write-Host "File downloaded successfully to:"
+            Write-Host `n"File downloaded successfully to:"
             Write-Host $downloadPath -BackgroundColor Green -ForegroundColor White
         } else {
-            Write-Host "File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
+            Write-Host `n"File download failed. File not found at $downloadPath" -BackgroundColor Red -ForegroundColor White
             exit
         }
     }
@@ -43,11 +43,11 @@ function Get-File {
     function Install-7zip4Powershell {
         if (-not (Get-Module -ListAvailable -Name 7Zip4PowerShell)) {
             try {
-                Write-Host "7Zip4PowerShell module not found. Installing..."
+                Write-Host `n"7Zip4PowerShell module not found. Installing..."
                 Install-Module -Name 7Zip4PowerShell -Scope CurrentUser -Force -ErrorAction Stop
             }
             catch {
-                Write-Host "Failed to install 7Zip4PowerShell module."
+                Write-Host `n"Failed to install 7Zip4PowerShell module."
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
             }
@@ -56,33 +56,32 @@ function Get-File {
             Import-Module 7Zip4PowerShell -ErrorAction Stop
         }
         catch {
-            Write-Host "Failed to import 7Zip4PowerShell module."
+            Write-Host `n"Failed to import 7Zip4PowerShell module."
             Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
             exit
         }
     }
-
-
 
     function Expand-ArchiveAdvanced {
         
         param (
             [Parameter(Mandatory = $false)]
             [switch] $Zip,
+
             [Parameter(Mandatory = $false)]
-            [switch] $7zip
+            [switch] $SevenZip
         )
         
         Write-Host "Expanding archive..."
         try {
-            if ($zip) {
-                $output = & { Expand-Archive -Path $downloadPath -Force -Verbose 4>&1 }
+            if ($Zip) {
+                $output = & { Expand-Archive -LiteralPath $downloadPath -DestinationPath $Destination -Force -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
                     if ($_ -match "Created '([^']+)'") {
                         $matches[1]
                     }
                 })
-            } elseif ($7zip) {
+            } elseif ($SevenZip) {
                 Install-7zip4Powershell
                 $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
@@ -97,16 +96,10 @@ function Get-File {
                 exit
         }
         
-        # Test if the archive was expanded successfully
-        Write-Host "Testing if the archive was expanded successfully..."
+        # Print the paths of the created files/folders
+        Write-Host `n"Extracted:"
         foreach ($path in $createdPaths) {
-            if (Test-Path -Path $path) {
-                Write-Host "Created:"
                 Write-Host $path -BackgroundColor Green -ForegroundColor White
-            } else {
-                Write-Host "Failed to find:"
-                Write-Host $path -BackgroundColor Red -ForegroundColor White
-            }
         }
 
         # Remove the original archive file
@@ -122,6 +115,7 @@ function Get-File {
         }
     }
 
+}
 
     ###########################################################################
     ############################ MAIN SCRIPT LOGIC ############################
@@ -130,7 +124,7 @@ function Get-File {
 
     Get-SourceType
 
-    # Extract the file name and create the full download path
+    # Extract the file name
     if ($sourceType -eq "UNC") {
         $fileName = $source.Split('\')[-1]
     } elseif ($sourceType -eq "URL") {
@@ -149,35 +143,32 @@ function Get-File {
     Write-Host "Download path set to:"
     Write-Host $downloadPath
 
-    # Download using Start-BitsTransfer
-    if ($false -eq $SkipDownload) {
-        try {
+    # Download
+    if ($true -eq $SkipDownload) {
+        Write-Host "Download skipped as requested."
+    } else {
+        if ($sourceType -eq "UNC") {
             # Download using Start-BitsTransfer
-            Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
-            Test-Download
-        } catch {
-            Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
-            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-        }
-
-    } else {
-        Write-Host "Download skipped as requested."
-    }
-
-    # Download using Invoke-WebRequest
-    if ($false -eq $SkipDownload) {
-        try {
-            Write-Host "Retrying download using 'Invoke-WebRequest'..."
-            Invoke-WebRequest -Uri $source -OutFile $downloadPath
-            Test-Download
-        } catch {
-            Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
-            Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
-            Write-Host "Please check the source address and try again."
-            exit
-        }
-    } else {
-        Write-Host "Download skipped as requested."
+            try {
+                # Download using Start-BitsTransfer
+                Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
+                Test-Download
+            } catch {
+                Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+            }
+        } elseif ($sourceType -eq "URL") {
+            # Download using Invoke-WebRequest
+            try {
+                Write-Host "Download using 'Invoke-WebRequest'..."
+                Invoke-WebRequest -Uri $source -OutFile $downloadPath
+                Test-Download
+            } catch {
+                Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+                Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
+                Write-Host "Please check the source address and try again."
+                exit
+            }
     }
 
     # Unzip the file
@@ -185,7 +176,7 @@ function Get-File {
         if ($fileName.EndsWith('.zip')) {
             Expand-ArchiveAdvanced -Zip
         } elseif ($fileName.EndsWith('.7z')) {
-            Expand-ArchiveAdvanced -7zip
+            Expand-ArchiveAdvanced -SevenZip
         } else {
             Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
         }
@@ -195,7 +186,15 @@ function Get-File {
 
 }
 
-$env:source = "https://app.box.com/shared/static/ofhhniqj9qvz42jz7177poirt2mnmlm2.7z"
-$env:destination = "C:\Temp"
+# Example usage:
+# Get-File -Source "\\server\share\file.zip" -Destination "C:\Temp" -SkipUnzip
+# Get-File -Source "https://example.com/file.zip" -Destination "C:\Temp" -SkipDownload
 
-Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$false -SkipDownload:$false
+# Command syntax built for NinjaOne "Get-File" script specifically, to interact with the passed in environment variables. COmment out if using outside of this conectxt.
+# Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
+
+
+$env:source = "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z"
+# $env:source = "https://app.box.com/shared/static/1pl6v4gdavxvlwx13ab77uo1piuf8wbw.zip"
+$env:destination = "C:\Temp"
+Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
