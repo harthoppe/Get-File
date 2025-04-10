@@ -18,10 +18,10 @@ function Get-File {
 
     function Get-SourceType {
         if ($source.StartsWith("\\")) {
-            $sourceType = "UNC"
+            $global:sourceType = "UNC"
             Write-Host `n"Source is a UNC path..."
         } elseif ($source.StartsWith("http")) {
-            $sourceType = "URL"
+            $global:sourceType = "URL"
             Write-Host `n"Source is a URL..."
         } else {
             $sourceType = "Unknown"
@@ -72,7 +72,7 @@ function Get-File {
             [switch] $SevenZip
         )
         
-        Write-Host "Expanding archive..."
+        Write-Host `n"Expanding archive..."
         try {
             if ($Zip) {
                 $output = & { Expand-Archive -LiteralPath $downloadPath -DestinationPath $Destination -Force -Verbose 4>&1 }
@@ -91,7 +91,7 @@ function Get-File {
                 })
             }
         } catch {
-                Write-Host "Failed to expand archive. Error:"
+                Write-Host `n"Failed to expand archive. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 exit
         }
@@ -105,10 +105,10 @@ function Get-File {
         # Remove the original archive file
         try {
             Remove-Item -Path $downloadPath -Force
-            Write-Host "Removed archive file:"
+            Write-Host `n"Removed archive file:"`n
             Write-Host $downloadPath
         } catch {
-            Write-Host "Failed to remove archive file:"
+            Write-Host `n"Failed to remove archive file:"`n
             Write-Host $downloadPath
             Write-Host "Error:"
             Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
@@ -128,41 +128,41 @@ function Get-File {
     } elseif ($sourceType -eq "URL") {
         $fileName = $source.Split('/')[-1]
     }
-    Write-Host "File name extracted:"
+    Write-Host "`nFile name extracted:"
     Write-Host $fileName
 
     # Set the download path
     if (Test-Path $Destination) {
         $downloadPath = Join-Path -Path $destination -ChildPath $fileName
     } else {
-        Write-Host "Destination path does not exist." -BackgroundColor Red -ForegroundColor White
+        Write-Host "`nDestination path does not exist." -BackgroundColor Red -ForegroundColor White
         exit
     }
-    Write-Host "Download path set to:"
+    Write-Host "`nDownload path set to:"
     Write-Host $downloadPath
 
     # Download
     if ($true -eq $SkipDownload) {
-        Write-Host "Download skipped as requested."
+        Write-Host "`nDownload skipped as requested."
     } else {
         if ($sourceType -eq "UNC") {
             # Download using Start-BitsTransfer
             try {
-                # Download using Start-BitsTransfer
+                Write-Host "`nDownloading using 'Start-BitsTransfer'..."
                 Start-BitsTransfer -Source $source -Destination $downloadPath -ErrorAction Stop
                 Test-Download
             } catch {
-                Write-Host "Failed to download file using 'Start-BitsTransfer'. Error:"
+                Write-Host "`nFailed to download file using 'Start-BitsTransfer'. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
             }
         } elseif ($sourceType -eq "URL") {
             # Download using Invoke-WebRequest
             try {
-                Write-Host "Download using 'Invoke-WebRequest'..."
+                Write-Host "`nDownloading using 'Invoke-WebRequest'..."
                 Invoke-WebRequest -Uri $source -OutFile $downloadPath
                 Test-Download
             } catch {
-                Write-Host "Failed to download file using 'Invoke-WebRequest'. Error:"
+                Write-Host "`nFailed to download file using 'Invoke-WebRequest'. Error:"
                 Write-Host $_.Exception.Message -BackgroundColor Red -ForegroundColor White
                 Write-Host "Please check the source address and try again."
                 exit
@@ -177,10 +177,10 @@ function Get-File {
         } elseif ($fileName.EndsWith('.7z')) {
             Expand-ArchiveAdvanced -SevenZip
         } else {
-            Write-Host "File is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
+            Write-Host "`nFile is not a supported archive format. No extraction performed." -BackgroundColor Yellow -ForegroundColor White
         }
     } else {
-        Write-Host "Unzip is skipped as requested."
+        Write-Host "`nUnzip is skipped as requested."
     }
 
 }
@@ -192,5 +192,6 @@ function Get-File {
 # Command syntax built for NinjaOne "Get-File" script specifically, to interact with the passed in environment variables. COmment out if using outside of this conectxt.
 # Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
 
-# $env:source = "https://app.box.com/shared/static/1pl6v4gdavxvlwx13ab77uo1piuf8wbw.zip"
-Get-File -Source "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z" -Destination "C:\Temp"
+# TESTING
+# Get-File -Source "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z" -Destination "C:\Temp"
+Get-File -Source "https://app.box.com/shared/static/1pl6v4gdavxvlwx13ab77uo1piuf8wbw.zip" -Destination "C:\Temp"
