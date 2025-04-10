@@ -18,10 +18,10 @@ function Get-File {
 
     function Get-SourceType {
         if ($source.StartsWith("\\")) {
-            $global:sourceType = "UNC"
+            $sourceType = "UNC"
             Write-Host `n"Source is a UNC path..."
         } elseif ($source.StartsWith("http")) {
-            $global:sourceType = "URL"
+            $sourceType = "URL"
             Write-Host `n"Source is a URL..."
         } else {
             $sourceType = "Unknown"
@@ -115,8 +115,6 @@ function Get-File {
         }
     }
 
-}
-
     ###########################################################################
     ############################ MAIN SCRIPT LOGIC ############################
     ###########################################################################
@@ -169,6 +167,7 @@ function Get-File {
                 Write-Host "Please check the source address and try again."
                 exit
             }
+        }
     }
 
     # Unzip the file
@@ -193,8 +192,5 @@ function Get-File {
 # Command syntax built for NinjaOne "Get-File" script specifically, to interact with the passed in environment variables. COmment out if using outside of this conectxt.
 # Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
 
-
-$env:source = "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z"
 # $env:source = "https://app.box.com/shared/static/1pl6v4gdavxvlwx13ab77uo1piuf8wbw.zip"
-$env:destination = "C:\Temp"
-Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
+Get-File -Source "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z" -Destination "C:\Temp"
