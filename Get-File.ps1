@@ -86,7 +86,7 @@ function Get-File {
                 $output = & { Expand-7Zip -ArchiveFileName $downloadPath -TargetPath $destination -ErrorAction Stop -Verbose 4>&1 }
                 $createdPaths = @($output | ForEach-Object {
                     if ($_ -match 'Extracting file "([^"]+)"') {
-                        $matches[1]
+                        Join-Path -Path $destination -ChildPath $matches[1]
                     }
                 })
             }
@@ -191,7 +191,3 @@ function Get-File {
 
 # Command syntax built for NinjaOne "Get-File" script specifically, to interact with the passed in environment variables. COmment out if using outside of this conectxt.
 # Get-File -Source $env:source -Destination $env:destination -SkipUnzip:$env:skipUnzip -SkipDownload:$env:skipDownload
-
-# TESTING
-# Get-File -Source "https://app.box.com/shared/static/pnukv1ny2qs2tt4tqdoltdsq3x0w8f6j.7z" -Destination "C:\Temp"
-Get-File -Source "https://app.box.com/shared/static/1pl6v4gdavxvlwx13ab77uo1piuf8wbw.zip" -Destination "C:\Temp"
